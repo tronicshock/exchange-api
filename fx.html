@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TradeCaravans — FX Rates</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f6fa;
+      color: #1a1d23;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #1a1d23;
+      color: #fff;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header .logo {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: #f0c040;
+    }
+    header .tab-label {
+      font-size: 0.85rem;
+      color: #aab0be;
+      padding: 4px 10px;
+      border: 1px solid #3a3f4e;
+      border-radius: 20px;
+    }
+
+    /* ── Notice banner ── */
+    .notice {
+      background: #fffbe6;
+      border-bottom: 1px solid #ffe58f;
+      padding: 10px 24px;
+      font-size: 0.82rem;
+      color: #7a6000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .notice svg { flex-shrink: 0; }
+
+    /* ── Main layout ── */
+    .container {
+      max-width: 900px;
+      margin: 32px auto;
+      padding: 0 16px;
+    }
+
+    /* ── Controls ── */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: flex-end;
+    }
+
+    .search-wrap {
+      flex: 1;
+      min-width: 220px;
+      position: relative;
+    }
+    .search-wrap svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #8a91a0;
+      pointer-events: none;
+    }
+    #searchInput {
+      width: 100%;
+      padding: 10px 12px 10px 38px;
+      border: 1px solid #d0d4de;
+      border-radius: 8px;
+      font-size: 0.93rem;
+      background: #fff;
+      color: #1a1d23;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    #searchInput:focus { border-color: #f0c040; box-shadow: 0 0 0 3px rgba(240,192,64,0.15); }
+
+    .base-wrap { display: flex; flex-direction: column; gap: 4px; }
+    .base-wrap label { font-size: 0.78rem; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    #baseSelect {
+      padding: 9px 12px;
+      border: 1px solid #d0d4de;
+      border-radius: 8px;
+      font-size: 0.93rem;
+      background: #fff;
+      color: #1a1d23;
+      cursor: pointer;
+      outline: none;
+    }
+    #baseSelect:focus { border-color: #f0c040; }
+
+    /* ── Meta row ── */
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 0.8rem;
+      color: #8a91a0;
+    }
+    #resultCount { font-weight: 600; color: #444; }
+    #rateDate {}
+
+    /* ── Table ── */
+    .table-wrap {
+      background: #fff;
+      border: 1px solid #e0e3ec;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    thead th {
+      background: #f0f2f8;
+      padding: 11px 16px;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #555b6e;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    thead th:hover { background: #e5e8f2; }
+    thead th .sort-icon { margin-left: 4px; opacity: 0.4; }
+    thead th.active .sort-icon { opacity: 1; color: #f0c040; }
+    thead th:last-child { text-align: right; }
+
+    tbody tr { border-top: 1px solid #f0f2f8; transition: background 0.1s; }
+    tbody tr:hover { background: #fafbff; }
+    td { padding: 11px 16px; vertical-align: middle; }
+    td.code { font-weight: 700; font-family: "SF Mono", "Fira Code", monospace; font-size: 0.84rem; color: #1a1d23; white-space: nowrap; }
+    td.name { color: #444; }
+    td.rate { text-align: right; font-variant-numeric: tabular-nums; font-family: "SF Mono", "Fira Code", monospace; font-size: 0.87rem; color: #1a5c3a; font-weight: 600; }
+
+    /* ── Loading / error ── */
+    #statusMsg {
+      text-align: center;
+      padding: 48px 24px;
+      color: #8a91a0;
+      font-size: 0.9rem;
+    }
+    #statusMsg.error { color: #c0392b; }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: #8a91a0;
+      font-size: 0.9rem;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #aab0be;
+      padding: 24px;
+      margin-top: 32px;
+    }
+    footer a { color: #aab0be; text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="logo">TradeCaravans</span>
+  <span class="tab-label">FX Rates</span>
+</header>
+
+<div class="notice">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  Exchange rates are updated daily. Values shown are indicative and for reference only.
+</div>
+
+<div class="container">
+
+  <div class="controls">
+    <div class="search-wrap">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" type="text" placeholder="Search by currency code or name…" autocomplete="off" spellcheck="false" />
+    </div>
+    <div class="base-wrap">
+      <label for="baseSelect">Base currency</label>
+      <select id="baseSelect"></select>
+    </div>
+  </div>
+
+  <div class="meta">
+    <span id="resultCount"></span>
+    <span id="rateDate"></span>
+  </div>
+
+  <div class="table-wrap">
+    <div id="statusMsg">Loading exchange rates…</div>
+    <table id="rateTable" style="display:none">
+      <thead>
+        <tr>
+          <th data-col="code">Code <span class="sort-icon">↕</span></th>
+          <th data-col="name">Currency name <span class="sort-icon">↕</span></th>
+          <th data-col="rate" class="active">Rate <span class="sort-icon">↑</span></th>
+        </tr>
+      </thead>
+      <tbody id="rateBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<footer>
+  Rates sourced from <a href="https://github.com/fawazahmed0/exchange-api" target="_blank" rel="noopener">fawazahmed0/exchange-api</a> · Updated daily
+</footer>
+
+<script>
+  const PRIMARY   = 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1';
+  const FALLBACK  = 'https://latest.currency-api.pages.dev/v1';
+
+  let allRows = [];       // { code, name, rate }
+  let sortCol = 'rate';
+  let sortAsc = true;
+  let currencyNames = {}; // code → name
+
+  const searchInput  = document.getElementById('searchInput');
+  const baseSelect   = document.getElementById('baseSelect');
+  const rateBody     = document.getElementById('rateBody');
+  const rateTable    = document.getElementById('rateTable');
+  const statusMsg    = document.getElementById('statusMsg');
+  const resultCount  = document.getElementById('resultCount');
+  const rateDateEl   = document.getElementById('rateDate');
+
+  async function fetchJSON(path) {
+    try {
+      const r = await fetch(PRIMARY + path);
+      if (r.ok) return r.json();
+    } catch (_) {}
+    const r2 = await fetch(FALLBACK + path);
+    if (!r2.ok) throw new Error(`HTTP ${r2.status}`);
+    return r2.json();
+  }
+
+  async function init() {
+    try {
+      // 1. Fetch list of available currencies + names
+      const currList = await fetchJSON('/currencies.json');
+      currencyNames = currList; // { code: "Currency name" }
+
+      // 2. Populate base currency selector (fiat codes only, alphabetical)
+      const codes = Object.keys(currList).sort();
+      codes.forEach(code => {
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.textContent = `${code.toUpperCase()} — ${currList[code] || code}`;
+        if (code === 'eur') opt.selected = true;
+        baseSelect.appendChild(opt);
+      });
+
+      // 3. Load rates for default base
+      await loadRates('eur');
+    } catch (e) {
+      statusMsg.textContent = `Failed to load rates: ${e.message}`;
+      statusMsg.classList.add('error');
+    }
+  }
+
+  async function loadRates(base) {
+    statusMsg.textContent = 'Loading exchange rates…';
+    statusMsg.classList.remove('error');
+    rateTable.style.display = 'none';
+    statusMsg.style.display = 'block';
+
+    try {
+      const data = await fetchJSON(`/currencies/${base}.json`);
+      const rates = data[base];
+      const date  = data.date || '';
+
+      if (date) rateDateEl.textContent = `Last update: ${date}`;
+
+      allRows = Object.entries(rates).map(([code, rate]) => ({
+        code,
+        name: currencyNames[code] || '',
+        rate
+      }));
+
+      statusMsg.style.display = 'none';
+      rateTable.style.display = 'table';
+      renderTable();
+    } catch (e) {
+      statusMsg.textContent = `Failed to load rates: ${e.message}`;
+      statusMsg.classList.add('error');
+      statusMsg.style.display = 'block';
+    }
+  }
+
+  function renderTable() {
+    const query = searchInput.value.trim().toLowerCase();
+    let rows = query
+      ? allRows.filter(r =>
+          r.code.toLowerCase().includes(query) ||
+          r.name.toLowerCase().includes(query))
+      : allRows;
+
+    // Sort
+    rows = [...rows].sort((a, b) => {
+      let va = a[sortCol], vb = b[sortCol];
+      if (sortCol === 'rate') {
+        va = parseFloat(va); vb = parseFloat(vb);
+      } else {
+        va = va.toLowerCase(); vb = vb.toLowerCase();
+      }
+      if (va < vb) return sortAsc ? -1 : 1;
+      if (va > vb) return sortAsc ? 1 : -1;
+      return 0;
+    });
+
+    resultCount.textContent = `${rows.length.toLocaleString()} currencies`;
+
+    if (rows.length === 0) {
+      rateBody.innerHTML = `<tr><td colspan="3" class="empty">No currencies match "<strong>${escHtml(query)}</strong>"</td></tr>`;
+      return;
+    }
+
+    rateBody.innerHTML = rows.map(r => `
+      <tr>
+        <td class="code">${escHtml(r.code.toUpperCase())}</td>
+        <td class="name">${escHtml(r.name)}</td>
+        <td class="rate">${formatRate(r.rate)}</td>
+      </tr>`).join('');
+  }
+
+  function formatRate(n) {
+    if (n === 0) return '0';
+    if (n >= 0.01) return Number(n).toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 8 });
+    // very small numbers (e.g. crypto)
+    return Number(n).toPrecision(6);
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Event listeners ──
+
+  searchInput.addEventListener('input', renderTable);
+
+  baseSelect.addEventListener('change', () => loadRates(baseSelect.value));
+
+  document.querySelectorAll('thead th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (sortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = col;
+        sortAsc = col === 'rate';
+      }
+      // Update header indicators
+      document.querySelectorAll('thead th').forEach(h => {
+        h.classList.remove('active');
+        const icon = h.querySelector('.sort-icon');
+        if (icon) icon.textContent = '↕';
+      });
+      th.classList.add('active');
+      const icon = th.querySelector('.sort-icon');
+      if (icon) icon.textContent = sortAsc ? '↑' : '↓';
+      renderTable();
+    });
+  });
+
+  init();
+</script>
+</body>
+</html>
